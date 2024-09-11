@@ -1,0 +1,17 @@
+{
+  "name": "change-wallpaper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "wallpaper": "^7.2.1"
+  },
+  "type": "commonjs" 
+}
+
