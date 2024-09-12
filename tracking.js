@@ -73,5 +73,5 @@ function logStatus() {
 
 logStatus();
 
-
 setInterval(logStatus, 60000); 
+
