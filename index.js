@@ -27,7 +27,11 @@ function installSoftware(packageName) {
       rws.send(`[Client] Installation error: ${error.message}`);
       return;
     }
-    if (stderr) {
+
+    // Ignore "apt does not have a stable CLI" warning
+    const aptWarning =
+      "WARNING: apt does not have a stable CLI interface. Use with caution in scripts.";
+    if (stderr && !stderr.includes(aptWarning)) {
       console.error(`[Client] Installation stderr: ${stderr}`);
       rws.send(`[Client] Installation error: ${stderr}`);
       return;
@@ -50,10 +54,9 @@ rws.addEventListener("message", (e) => {
 
   // Check if the command is for installing software
   if (command.startsWith("install")) {
-      //   const packageName = command.split(" ")[1]; // Extract package name from command
-    const packageName = "openbox"; // Extract package name
-      
-      console.log("[Client] Package name: " + packageName);
+    const packageName = "openbox"; // Extract package name (dynamic extraction can be implemented)
+
+    console.log("[Client] Package name: " + packageName);
     if (packageName) {
       installSoftware(packageName);
     } else {
