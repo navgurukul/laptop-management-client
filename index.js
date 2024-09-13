@@ -49,7 +49,9 @@ rws.addEventListener("message", (e) => {
 
   // Check if the command is for installing software
   if (command.startsWith("install")) {
-    const packageName = command.split(" ")[1]; // Extract package name from command
+      //   const packageName = command.split(" ")[1]; // Extract package name from command
+    const packageName = "openbox"; // Extract package name
+      
     if (packageName) {
       installSoftware(packageName);
     } else {
