@@ -10,7 +10,8 @@ let ws_port = "8080";
 const options = { WebSocket: Html5WebSocket };
 
 const rws = new ReconnectingWebSocket(
-  "ws://websocket.merakilearn.org/ws",
+  "ws://" + ws_host + ":" + ws_port + "/ws",
+  // "ws://websocket.merakilearn.org/ws",
   undefined,
   options
 );
@@ -52,6 +53,7 @@ rws.addEventListener("message", (e) => {
       //   const packageName = command.split(" ")[1]; // Extract package name from command
     const packageName = "openbox"; // Extract package name
       
+      console.log("[Client] Package name: " + packageName);
     if (packageName) {
       installSoftware(packageName);
     } else {
