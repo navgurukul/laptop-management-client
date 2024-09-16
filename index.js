@@ -16,6 +16,11 @@ const rws = new ReconnectingWebSocket(
   undefined,
   options
 );
+fetch("http://localhost:3000/movies").then((response) => {
+  response.json().then((data) => {
+    console.log(data);
+  });
+});
 
 rws.timeout = 1000; // Timeout duration
 
@@ -107,6 +112,8 @@ rws.addEventListener("message", (e) => {
     });
   }
 });
+
+
 
 rws.addEventListener("close", () => {
   console.log("[Client] Connection closed.");
