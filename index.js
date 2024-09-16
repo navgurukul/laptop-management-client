@@ -1,6 +1,7 @@
 const Html5WebSocket = require("html5-websocket");
 const ReconnectingWebSocket = require("reconnecting-websocket");
 const { exec } = require("child_process");
+const os = require("os");
 
 // WebSocket initialization
 let ws_host = "localhost"; // Replace with your EC2 IP or hostname
@@ -17,6 +18,23 @@ const rws = new ReconnectingWebSocket(
 );
 
 rws.timeout = 1000; // Timeout duration
+
+// Function to get MAC address
+function getMacAddress() {
+  const networkInterfaces = os.networkInterfaces();
+  for (let interfaceName in networkInterfaces) {
+    const networkDetails = networkInterfaces[interfaceName];
+    for (let i = 0; i < networkDetails.length; i++) {
+      if (
+        networkDetails[i].mac &&
+        networkDetails[i].mac !== "00:00:00:00:00:00"
+      ) {
+        return networkDetails[i].mac;
+      }
+    }
+  }
+  return "Unknown MAC Address";
+}
 
 // Function to install software
 function installSoftware(packageName) {
@@ -38,8 +56,14 @@ function installSoftware(packageName) {
     }
 
     console.log(`[Client] Installation stdout: ${stdout}`);
-    // Send success message to the server
-    rws.send(`[Client] Software installed successfully: ${packageName}`);
+
+    // Get MAC address
+    const macAddress = getMacAddress();
+
+    // Send success message to the server including MAC address and installed status
+    rws.send(
+      `[Client] ${macAddress}: Software installed successfully: ${packageName}`
+    );
   });
 }
 
