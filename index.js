@@ -5,7 +5,7 @@ const os = require("os");
 
 // WebSocket initialization
 let ws_host = "localhost"; // Replace with your EC2 IP or hostname
-let ws_port = "8080";
+let ws_port = "3000";
 
 // Ensure that the valid WebSocket class is passed into the options
 const options = { WebSocket: Html5WebSocket };
