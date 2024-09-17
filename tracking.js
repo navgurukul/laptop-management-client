@@ -3,7 +3,7 @@ const os = require("os");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const axios = require("axios");
-const dbPath = path.join(__dirname, "system_status.db");
+const dbPath = path.join(__dirname, "system_tracking.db");
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("Error opening database:", err.message);
@@ -13,12 +13,11 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 //
 db.serialize(() => {
-  db.run(`DROP TABLE IF EXISTS system_status`);
+  db.run(`DROP TABLE IF EXISTS system_tracking`);
   db.run(`
-    CREATE TABLE system_status(
+    CREATE TABLE system_tracking(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      unique_id varchar(17) NOT NULL,
-      status TEXT,
+      mac_address varchar(17) NOT NULL,
       timestamp TEXT,
       minutes_online INTEGER,
       location TEXT,
@@ -68,7 +67,7 @@ async function logStatus() {
   const status = "active";
   const location = await getLocation();
   db.get(
-    `SELECT * FROM system_status WHERE unique_id = ?`,
+    `SELECT * FROM system_tracking WHERE mac_address = ?`,
     [uniqueId],
     (err, row) => {
       if (err) {
@@ -76,7 +75,7 @@ async function logStatus() {
       } else if (row) {
         const minutes = row.minutes_online + 1;
         db.run(
-          `UPDATE system_status SET status = ?, minutes_online = ?, location = ? WHERE unique_id = ?`,
+          `UPDATE system_tracking SET status = ?, minutes_online = ?, location = ? WHERE mac_address = ?`,
           [status, minutes, location, uniqueId],
           (err) => {
             if (err) {
@@ -88,7 +87,7 @@ async function logStatus() {
         );
       } else {
         db.run(
-          `INSERT INTO system_status (unique_id, status, timestamp, minutes_online, location) VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO system_tracking (mac_address, status, timestamp, minutes_online, location) VALUES (?, ?, ?, ?, ?)`,
           [uniqueId, status, timestamp, 1, location],
           (err) => {
             if (err) {
@@ -108,7 +107,7 @@ process.on('SIGINT', () => {
   const uniqueId = getUniqueId();
   const timestamp = new Date().toISOString();
   db.run(
-    `UPDATE system_status SET status = ?, minutes_online = ? WHERE unique_id = ?`,
+    `UPDATE system_tracking SET status = ?, minutes_online = ? WHERE mac_address = ?`,
     ["OFFLINE", null, uniqueId],
     (err) => {
       if (err) {
