@@ -1,77 +1,123 @@
 const fs = require("fs");
 const os = require("os");
-const sqlite3 = require("sqlite3").verbose(); 
+const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
-const shell = require("shelljs"); 
-
+const axios = require("axios");
 const dbPath = path.join(__dirname, "system_status.db");
-const db = new sqlite3.Database(dbPath);
-
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error("Error opening database:", err.message);
+  } else {
+    console.log("Connected to the database.");
+  }
+});
+//
 db.serialize(() => {
+  db.run(`DROP TABLE IF EXISTS system_status`);
   db.run(`
-    CREATE TABLE IF NOT EXISTS system_status (
+    CREATE TABLE system_status(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      unique_id TEXT,
+      unique_id varchar(17) NOT NULL,
       status TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
+      timestamp TEXT,
+      minutes_online INTEGER,
+      location TEXT,
+      created_at timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 });
-
+let lastKnownUniqueId = null;
 function getUniqueId() {
   const networkInterfaces = os.networkInterfaces();
-  for (const interface in networkInterfaces) {
-    for (const address of networkInterfaces[interface]) {
-
+  for (const iface in networkInterfaces) {
+    for (const address of networkInterfaces[iface]) {
       if (address.family === "IPv4" && !address.internal) {
-        return address.mac; 
+        lastKnownUniqueId = address.mac;
+        return address.mac;
       }
     }
   }
-  return "UNKNOWN_ID"; 
+  return lastKnownUniqueId || "UNKNOWN_ID";
 }
-
-
 function isOnline() {
   const networkInterfaces = os.networkInterfaces();
   let hasValidInterface = false;
-
-  for (const interface in networkInterfaces) {
-    for (const address of networkInterfaces[interface]) {
+  for (const iface in networkInterfaces) {
+    for (const address of networkInterfaces[iface]) {
       if (address.family === "IPv4" && !address.internal) {
-        hasValidInterface = true; 
+        hasValidInterface = true;
         break;
       }
     }
   }
-
-  return hasValidInterface; 
+  return hasValidInterface;
 }
-
-
-function logStatus() {
-  const onlineStatus = isOnline();
-  const uniqueId = getUniqueId(); 
+async function getLocation() {
+  try {
+    const response = await axios.get('http://ip-api.com/json/');
+    const { city, regionName, country } = response.data;
+    return `${city}, ${regionName}, ${country}`;
+  } catch (error) {
+    console.error("Error fetching location:", error.message);
+    return "Unknown Location";
+  }
+}
+async function logStatus() {
+  const uniqueId = getUniqueId();
   const timestamp = new Date().toISOString();
-  const status = onlineStatus ? "ONLINE" : "OFFLINE";
-
-  
-  db.run(
-    `INSERT INTO system_status (unique_id, status, timestamp) VALUES (?, ?, ?)`,
-    [uniqueId, status, timestamp],
-    (err) => {
+  const status = "active";
+  const location = await getLocation();
+  db.get(
+    `SELECT * FROM system_status WHERE unique_id = ?`,
+    [uniqueId],
+    (err, row) => {
       if (err) {
-        console.error("Error inserting into database:", err);
+        console.error("Error selecting from database:", err);
+      } else if (row) {
+        const minutes = row.minutes_online + 1;
+        db.run(
+          `UPDATE system_status SET status = ?, minutes_online = ?, location = ? WHERE unique_id = ?`,
+          [status, minutes, location, uniqueId],
+          (err) => {
+            if (err) {
+              console.error("Error updating database:", err);
+            } else {
+              console.log(`Status updated: ${timestamp} - "${uniqueId}" System is ${status} for ${minutes} minutes at ${location}`);
+            }
+          }
+        );
       } else {
-        console.log(
-          `Status logged: ${timestamp} - "${uniqueId}" System is ${status}`
+        db.run(
+          `INSERT INTO system_status (unique_id, status, timestamp, minutes_online, location) VALUES (?, ?, ?, ?, ?)`,
+          [uniqueId, status, timestamp, 1, location],
+          (err) => {
+            if (err) {
+              console.error("Error inserting into database:", err);
+            } else {
+              console.log(`Status logged: ${timestamp} - "${uniqueId}" System is ${status} for 1 minute at ${location}`);
+            }
+          }
         );
       }
     }
   );
 }
-
 logStatus();
-
-setInterval(logStatus, 60000); 
-
+setInterval(logStatus, 60000);
+process.on('SIGINT', () => {
+  const uniqueId = getUniqueId();
+  const timestamp = new Date().toISOString();
+  db.run(
+    `UPDATE system_status SET status = ?, minutes_online = ? WHERE unique_id = ?`,
+    ["OFFLINE", null, uniqueId],
+    (err) => {
+      if (err) {
+        console.error("Error updating database on exit:", err);
+      } else {
+        console.log(`Status updated: ${timestamp} - "${uniqueId}" System is `);
+      }
+      db.close(); // Close the database connection
+      process.exit();
+    }
+  );
+});
