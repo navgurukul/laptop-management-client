@@ -1,32 +1,31 @@
-const fs = require('fs');
+const sqlite3 = require('sqlite3').verbose();
 const axios = require('axios');
-const path = require('path');
-const dbPath = path.join(__dirname, 'system_tracking.db');
 
-// Function to upload the database file to the server
-async function syncDatabase() {
-  const isOnline = require('os').networkInterfaces();
-  
-  if (!isOnline) {
-    console.log('No active internet connection. Syncing skipped.');
-    return;
-  }
+// Extract data from the SQLite .db file and send it to the server
+function syncDatabase() {
+  const db = new sqlite3.Database('/system_tracking.db', sqlite3.OPEN_READONLY, (err) => {
+    if (err) {
+      return console.error('Error opening database:', err.message);
+    }
 
-  try {
-    const fileStream = fs.createReadStream(dbPath);
-
-    const response = await axios.post('http://websocket.merakilearn.org/databse-sync', fileStream, {
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename=${path.basename(dbPath)}`,
-      },
+    db.all(`SELECT * FROM system_tracking`, async (err, rows) => {
+      if (err) {
+        console.error('Error reading from database:', err.message);
+      } else {
+        try {
+          const response = await axios.post('http://websocket.merakilearn.org/database-sync', {
+            data: rows, // Send the extracted data to the server
+          });
+          console.log('Sync successful:', response.data);
+        } catch (error) {
+          console.error('Error syncing database:', error.message);
+        }
+      }
     });
 
-    console.log('Database sync successful:', response.data);
-  } catch (error) {
-    console.error('Error syncing database:', error.message);
-  }
+    db.close();
+  });
 }
 
-// Example call to sync database every 5 minutes
-setInterval(syncDatabase, 300000); // 5 minutes in milliseconds
+// Example call
+syncDatabase();
