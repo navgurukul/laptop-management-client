@@ -27,5 +27,6 @@ function syncDatabase() {
   });
 }
 
-// Example call
+
 syncDatabase();
+// module.exports = syncDatabase;

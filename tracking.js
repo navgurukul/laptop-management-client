@@ -22,7 +22,7 @@ db.serialize(() => {
     CREATE TABLE system_tracking (
       id INTEGER PRIMARY KEY AUTOINCREMENT, 
       mac_address VARCHAR(17) NOT NULL,
-      active_time TEXT,
+      active_time INTEGER NOT NULL, 
       date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       location TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -144,3 +144,4 @@ process.on("SIGINT", () => {
     }
   );
 });
+
