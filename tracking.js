@@ -15,17 +15,16 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Enable foreign key support and create the table
+// Enable foreign key support and create the table if it doesn't exist
 db.serialize(() => {
-  db.run(`PRAGMA foreign_keys = ON;`); // Enable foreign key support in SQLite
-  db.run(`DROP TABLE IF EXISTS system_tracking;`);
+  db.run(`PRAGMA foreign_keys = ON;`);
   db.run(`
-    CREATE TABLE system_tracking (
+    CREATE TABLE IF NOT EXISTS system_tracking (
       id INTEGER PRIMARY KEY AUTOINCREMENT, 
       mac_address VARCHAR(17) NOT NULL,
       username TEXT NOT NULL,
       active_time INTEGER NOT NULL, 
-      date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      date DATE NOT NULL,  
       location TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -47,21 +46,6 @@ function getUniqueId() {
   return lastKnownUniqueId || "UNKNOWN_ID";
 }
 
-// Function to check if system is online
-function isOnline() {
-  const networkInterfaces = os.networkInterfaces();
-  let hasValidInterface = false;
-  for (const iface in networkInterfaces) {
-    for (const address of networkInterfaces[iface]) {
-      if (address.family === "IPv4" && !address.internal) {
-        hasValidInterface = true;
-        break;
-      }
-    }
-  }
-  return hasValidInterface;
-}
-
 // Function to get location based on IP address
 async function getLocation() {
   try {
@@ -79,32 +63,34 @@ async function logStatus() {
   const uniqueId = getUniqueId();
   const username = os.userInfo().username; // Get the username
   const timestamp = new Date().toISOString();
-  const status = "active";
   const location = await getLocation();
-  const date = new Date().toISOString().split("T")[0]; // Get the date
+  const date = new Date().toISOString().split("T")[0]; // Get the current date
 
+  // Check if the entry for the current MAC address and today's date exists
   db.get(
-    `SELECT * FROM system_tracking WHERE mac_address = ?`,
-    [uniqueId],
+    `SELECT * FROM system_tracking WHERE mac_address = ? AND date = ?`,
+    [uniqueId, date],
     (err, row) => {
       if (err) {
         console.error("Error selecting from database:", err);
       } else if (row) {
-        const activeTime = row.active_time + 1; // Increment active time by 1 minute
+        // If a record for the current date exists, increment the active time
+        const updatedActiveTime = row.active_time + 1; // Increment active time by 1 minute
         db.run(
-          `UPDATE system_tracking SET active_time = ?, location = ?, date = ? WHERE mac_address = ?`,
-          [activeTime, location, date, uniqueId],
+          `UPDATE system_tracking SET active_time = ?, location = ? WHERE mac_address = ? AND date = ?`,
+          [updatedActiveTime, location, uniqueId, date],
           (err) => {
             if (err) {
               console.error("Error updating database:", err);
             } else {
               console.log(
-                `Status updated: ${timestamp} - "${uniqueId}" (${username}) active for ${activeTime} minutes at ${location} on ${date}`
+                `Status updated: ${timestamp} - "${uniqueId}" (${username}) active for ${updatedActiveTime} minutes at ${location} on ${date}`
               );
             }
           }
         );
       } else {
+        // If no record exists for the current date, create a new entry
         db.run(
           `INSERT INTO system_tracking (mac_address, username, date, active_time, location) VALUES (?, ?, ?, ?, ?)`,
           [uniqueId, username, date, 1, location],
@@ -113,7 +99,7 @@ async function logStatus() {
               console.error("Error inserting into database:", err);
             } else {
               console.log(
-                `Status logged: ${timestamp} - "${uniqueId}" (${username}) active for 1 minute at ${location}`
+                `Status logged: ${timestamp} - "${uniqueId}" (${username}) active for 1 minute at ${location} on ${date}`
               );
             }
           }
@@ -125,27 +111,27 @@ async function logStatus() {
 
 // Log the system status every 1 minute (60000 milliseconds)
 logStatus();
-setInterval(logStatus, 60000);
+setInterval(logStatus, 1000);
 
-// Handle system exit
-process.on("SIGINT", () => {
-  const uniqueId = getUniqueId();
-  const username = os.userInfo().username; // Get the username again on exit
-  const timestamp = new Date().toISOString();
+// // Handle system exit
+// process.on("SIGINT", () => {
+//   const uniqueId = getUniqueId();
+//   const username = os.userInfo().username; // Get the username again on exit
+//   const timestamp = new Date().toISOString();
 
-  db.run(
-    `UPDATE system_tracking SET active_time = ?, location = ? WHERE mac_address = ?`,
-    ["OFFLINE", null, uniqueId],
-    (err) => {
-      if (err) {
-        console.error("Error updating database on exit:", err);
-      } else {
-        console.log(
-          `Status updated: ${timestamp} - "${uniqueId}" (${username}) System is offline`
-        );
-      }
-      db.close(); // Close the database connection
-      process.exit();
-    }
-  );
-});
+//   db.run(
+//     `UPDATE system_tracking SET location = ? WHERE mac_address = ? AND date = ?`,
+//     [null, uniqueId, new Date().toISOString().split("T")[0]],
+//     (err) => {
+//       if (err) {
+//         console.error("Error updating database on exit:", err);
+//       } else {
+//         console.log(
+//           `Status updated: ${timestamp} - "${uniqueId}" (${username}) System is offline`
+//         );
+//       }
+//       db.close(); // Close the database connection
+//       process.exit();
+//     }
+//   );
+// });
