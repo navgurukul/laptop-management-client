@@ -5,13 +5,19 @@ const wss = new WebSocket.Server({ port: 8080 });
 wss.on("connection", (ws) => {
   console.log("Client connected");
 
-  const commands = [
-    "ls", // List files in the current directory
-    "pwd", // Print working directory
-    "whoami", // Show current user
-  ];
+  const commands = 
+    [
+      "sudo apt install apt-transport-https curl",
+      "sudo curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg",
+      "echo 'deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main' | sudo tee /etc/apt/sources.list.d/brave-browser-release.list",
+      "sudo apt update",
+      "sudo apt install brave-browser"
+    ]
+  
+  
+  
 
-  // Log the commands being sent to the client
+  // Log the commands being sent to the clients
   console.log("Sending commands to client:", commands);
 
   // Send the commands to the client as JSON
