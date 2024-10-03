@@ -1,100 +1,59 @@
-// const WebSocket = require("ws");
-// const readline = require("readline");
-// const fs = require("fs");
-// const path = require("path");
-
-
-// const rl = readline.createInterface({
-//   input: process.stdin,
-//   output: process.stdout,
-// });
-
-
-// const filePath = path.join(__dirname, 'channel.js');
-
-// function updateScriptFile(newChannels) {
-//   try {
-//     const oldContent = fs.readFileSync(filePath, 'utf8');
-
-    
-//     const newContent = oldContent.replace(/(const channelsToSubscribe = \[).*(\];)/, `$1"${newChannels.join('", "')}"$2`);
-
-    
-//     fs.writeFileSync(filePath, newContent);
-
-//     console.log(`Script updated with new channels: ${newChannels.join(', ')}`);
-//   } catch (err) {
-//     console.error("Error updating the script file:", err);
-//   }
-// }
-
-// rl.question("Please enter the channels to subscribe to (e.g., channel1, channel2, channel3): ", (input) => {
-//   const channelsToSubscribe = input.split(',').map(channel => channel.trim()); 
-//   console.log(`You entered: ${channelsToSubscribe.join(', ')}`);
-
-  
-//   updateScriptFile(channelsToSubscribe);
-
-//   // const channelsToSubscribe =["channel2", "channel3"];
-// console.log(channelsToSubscribe)
-  
-//   const ws = new WebSocket("ws://localhost:8080");
-
-//   ws.on("open", () => {
-//     console.log("Connected to server");
-//     console.log(`Subscribing to channels: ${channelsToSubscribe.join(', ')}`);
-
-    
-//     const message = JSON.stringify({ type: "subscribe", channels: channelsToSubscribe });
-//     console.log("Sending message to server:", message);
-//     ws.send(message);
-//   });
-
-//   ws.on("message", (message) => {
-//     console.log(`Received: ${message}`);
-//   });
-
-//   ws.on("close", () => {
-//     console.log("Disconnected from server");
-//   });
-
-  
-//   rl.close();
-// });
-
-
-const WebSocket = require("ws");
+const fs = require("fs");
+const path = require("path");
 const readline = require("readline");
+
+// Path to the JSON file
+const channelFilePath = path.join(__dirname, "channel.json");
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
 
-rl.question("Please enter the channels to subscribe to (e.g., channel1, channel2, channel3): ", (input) => {
-  const channelsToSubscribe = input.split(',').map(channel => channel.trim());
-  console.log(`You entered: ${channelsToSubscribe.join(', ')}`);
+// Function to get current channels from JSON file
+function getCurrentChannels() {
+  try {
+    const data = fs.readFileSync(channelFilePath, "utf8");
+    const parsedData = JSON.parse(data);
+    return parsedData.currentChannel || []; // Return an empty array if no channels exist
+  } catch (error) {
+    console.error("Error reading channel data:", error);
+    return []; // Return empty array on error
+  }
+}
 
-  // Create a WebSocket connection
-  const ws = new WebSocket("ws://localhost:8080");
+// Function to update the current channels in JSON file
+function setCurrentChannels(channels) {
+  try {
+    const data = { currentChannel: channels };
+    fs.writeFileSync(channelFilePath, JSON.stringify(data, null, 2));
+    console.log(`Current Channel updated to: ${channels.join(", ")}`);
+  } catch (error) {
+    console.error("Error writing channel data:", error);
+  }
+}
 
-  ws.on("open", () => {
-    console.log("Connected to server");
-    console.log(`Subscribing to channels: ${channelsToSubscribe.join(', ')}`);
+// Prompt user for new channel names
+rl.question(
+  "Please enter the new channel names (comma-separated): ",
+  (input) => {
+    // Split input by commas and trim whitespace
+    const newChannelNames = input
+      .split(",")
+      .map((channel) => channel.trim())
+      .filter(Boolean); // Remove empty strings
 
-    // Send subscription message to the server
-    const message = JSON.stringify({ type: "subscribe", channels: channelsToSubscribe });
-    console.log("Sending message to server:", message);
-    ws.send(message);
-  });
+    // Get existing channels
+    const currentChannels = getCurrentChannels();
 
-  ws.on("message", (message) => {
-    console.log(`Received: ${message}`);
-  });
+    // If there are any new channels provided, replace the existing one
+    if (newChannelNames.length > 0) {
+      // Replace existing channels with the new ones
+      setCurrentChannels(newChannelNames);
+    } else {
+      console.log("No valid channel names provided.");
+    }
 
-  ws.on("close", () => {
-    console.log("Disconnected from server");
-  });
-
-  rl.close();
-});
+    rl.close();
+  }
+);
