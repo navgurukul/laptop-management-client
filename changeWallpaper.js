@@ -13,3 +13,4 @@ exec(command, (error, stdout, stderr) => {
     }
     console.log(`Wallpaper changed successfully: ${stdout}`);
 });
+
