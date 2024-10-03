@@ -27,9 +27,9 @@ console.log(`Initial Channel Names loaded: ${channelNames.join(", ")}`);
 let ws_host = "localhost"; // Replace with your EC2 IP or hostname
 let ws_port = "8080";
 
-const rws = new WebSocket(`ws://${ws_host}:${ws_port}`);
+// const rws = new WebSocket(`ws://${ws_host}:${ws_port}`);
 
-// const rws = new WebSocket("ws://websocket.merakilearn.org/ws");
+const rws = new WebSocket("ws://websocket.merakilearn.org/ws");
 
 rws.on("open", () => {
   console.log("[Client] Connected to WebSocket server.");
