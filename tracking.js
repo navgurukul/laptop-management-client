@@ -112,26 +112,3 @@ async function logStatus() {
 // Log the system status every 1 minute (60000 milliseconds)
 logStatus();
 setInterval(logStatus, 1000);
-
-// // Handle system exit
-// process.on("SIGINT", () => {
-//   const uniqueId = getUniqueId();
-//   const username = os.userInfo().username; // Get the username again on exit
-//   const timestamp = new Date().toISOString();
-
-//   db.run(
-//     `UPDATE system_tracking SET location = ? WHERE mac_address = ? AND date = ?`,
-//     [null, uniqueId, new Date().toISOString().split("T")[0]],
-//     (err) => {
-//       if (err) {
-//         console.error("Error updating database on exit:", err);
-//       } else {
-//         console.log(
-//           `Status updated: ${timestamp} - "${uniqueId}" (${username}) System is offline`
-//         );
-//       }
-//       db.close(); // Close the database connection
-//       process.exit();
-//     }
-//   );
-// });
