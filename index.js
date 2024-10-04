@@ -97,6 +97,31 @@ function getMacAddress() {
   return "Unknown MAC Address";
 }
 
+// // Function to execute a command
+// const executeCommand = (command) => {
+//   return new Promise((resolve, reject) => {
+//     const macAddress = getMacAddress(); // Get the MAC address
+
+//     console.log(`Executing command: ${command}`);
+//     exec(command, (error, stdout, stderr) => {
+//       if (error) {
+//         console.error(`Error executing command "${command}": ${error.message}`);
+//         // rws.send(
+//         //   `[MAC: ${macAddress}] Error executing command "${command}": ${error.message}\n`
+//         // );
+//         reject(error);
+//       } else {
+//         console.log(`Output of "${command}":\n${stdout}`);
+//         // rws.send(`[MAC: ${macAddress}] Output of "${command}": ${stdout}\n`);
+//         if (stderr) {
+//           console.warn(`Stderr of "${command}": ${stderr}`);
+//           // rws.send(`[MAC: ${macAddress}] Stderr of "${command}": ${stderr}\n`);
+//         }
+//         resolve();
+//       }
+//     });
+//   });
+// };
 const executeCommand = (command) => {
   return new Promise((resolve, reject) => {
     console.log(`Executing command: ${command}`);
@@ -165,7 +190,6 @@ X-GNOME-Autostart-enabled=true
       console.error(`Error creating shortcut for ${softwareName}: ${err.message}`);
     } else {
       console.log(`Shortcut for ${softwareName} created on the desktop at ${desktopPath}.`);
-
       // Make the .desktop file executable
       exec(`chmod +x "${desktopPath}"`, (error) => {
         if (error) {
