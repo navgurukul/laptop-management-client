@@ -119,13 +119,13 @@ const executeCommand = (command) => {
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error executing command "${command}": ${error.message}`);
-        rws.send({ mac: macAddress, success: false});
+        rws.send( JSON.stringify({ mac: macAddress, success: false}));
 
         reject(error);
       } else {
         console.log(`Output of "${command}":\n${stdout}`);
         
-           rws.send({ mac: macAddress, success: true });
+           rws.send( JSON.stringify({ mac: macAddress, success: true }));
       
 
         if (stderr) {
