@@ -26,7 +26,7 @@ let ws_port = "8080";
 
 // const rws = new WebSocket(`ws://${ws_host}:${ws_port}`);
 
-const rws = new WebSocket("ws://websocket.merakilearn.org/ws");
+const rws = new WebSocket("wss://rms.thesama.in");
 
 rws.on("open", () => {
   console.log("[Client] Connected to WebSocket server.");
@@ -46,6 +46,20 @@ rws.on("message", async (data) => {
   const commands = dataObj.commands;
   console.log(`[Client] Command received from server: ${typeof commands}`);
   const macAddress = getMacAddress(); // Get the MAC address
+
+  if (!Array.isArray(commands)) {
+    console.error("Received commands is not an array:", commands);
+    
+    // Send an error message back to the server
+    rws.send(
+      JSON.stringify({
+        success: false,
+        mac: macAddress,
+        error: "Commands is not an array",
+      })
+    );
+    return; // Exit early if commands is not an array
+  }
 
   try {
     for (const command of commands) {
@@ -122,17 +136,29 @@ function getMacAddress() {
 //     });
 //   });
 // };
+
 const executeCommand = (command) => {
   return new Promise((resolve, reject) => {
+    const macAddress = getMacAddress(); // Get the MAC address
+
     console.log(`Executing command: ${command}`);
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error executing command "${command}": ${error.message}`);
+        rws.send(`[MAC: ${macAddress}] Error executing command "${command}": "failed" `);
+
+
+        
         reject(error);
       } else {
         console.log(`Output of "${command}":\n${stdout}`);
+        rws.send(`[MAC: ${macAddress}] Command "${command}": "executed successfully."`);
+
+
+
         if (stderr) {
           console.warn(`Stderr of "${command}": ${stderr}`);
+          // rws.send(`[MAC: ${macAddress}] Stderr of "${command}": ${stderr}\n`);
         }
 
         // Check if the command is an installation command
@@ -159,6 +185,7 @@ const executeCommand = (command) => {
     });
   });
 };
+
 
 function createDesktopShortcut(softwareName) {
   const desktopPath = path.join(os.homedir(), "Desktop", `${softwareName}.desktop`);
