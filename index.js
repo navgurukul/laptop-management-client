@@ -21,7 +21,7 @@ function getCurrentChannel() {
 
 let channelNames = getCurrentChannel(); // Expecting an array of channels
 console.log(`Initial Channel Names loaded: ${channelNames.join(", ")}`);
-let ws_host = "localhost"; 
+let ws_host = "localhost";
 let ws_port = "8080";
 
 // const rws = new WebSocket(`ws://${ws_host}:${ws_port}`);
@@ -49,7 +49,7 @@ rws.on("message", async (data) => {
 
   if (!Array.isArray(commands)) {
     console.error("Received commands is not an array:", commands);
-    
+
     // Send an error message back to the server
     rws.send(
       JSON.stringify({
@@ -111,32 +111,6 @@ function getMacAddress() {
   return "Unknown MAC Address";
 }
 
-// // Function to execute a command
-// const executeCommand = (command) => {
-//   return new Promise((resolve, reject) => {
-//     const macAddress = getMacAddress(); // Get the MAC address
-
-//     console.log(`Executing command: ${command}`);
-//     exec(command, (error, stdout, stderr) => {
-//       if (error) {
-//         console.error(`Error executing command "${command}": ${error.message}`);
-//         // rws.send(
-//         //   `[MAC: ${macAddress}] Error executing command "${command}": ${error.message}\n`
-//         // );
-//         reject(error);
-//       } else {
-//         console.log(`Output of "${command}":\n${stdout}`);
-//         // rws.send(`[MAC: ${macAddress}] Output of "${command}": ${stdout}\n`);
-//         if (stderr) {
-//           console.warn(`Stderr of "${command}": ${stderr}`);
-//           // rws.send(`[MAC: ${macAddress}] Stderr of "${command}": ${stderr}\n`);
-//         }
-//         resolve();
-//       }
-//     });
-//   });
-// };
-
 const executeCommand = (command) => {
   return new Promise((resolve, reject) => {
     const macAddress = getMacAddress(); // Get the MAC address
@@ -145,16 +119,14 @@ const executeCommand = (command) => {
     exec(command, (error, stdout, stderr) => {
       if (error) {
         console.error(`Error executing command "${command}": ${error.message}`);
-        rws.send(`[MAC: ${macAddress}] Error executing command "${command}": "failed" `);
+        rws.send({ mac: macAddress, success: false});
 
-
-        
         reject(error);
       } else {
         console.log(`Output of "${command}":\n${stdout}`);
-        rws.send(`[MAC: ${macAddress}] Command "${command}": "executed successfully."`);
-
-
+        
+           rws.send({ mac: macAddress, success: true });
+      
 
         if (stderr) {
           console.warn(`Stderr of "${command}": ${stderr}`);
@@ -162,18 +134,25 @@ const executeCommand = (command) => {
         }
 
         // Check if the command is an installation command
-        if (command.startsWith("sudo apt install") || command.startsWith("apt install")) {
-          const commandParts = command.split(' ');
-          const installIndex = commandParts.indexOf('install');
+        if (
+          command.startsWith("sudo apt install") ||
+          command.startsWith("apt install")
+        ) {
+          const commandParts = command.split(" ");
+          const installIndex = commandParts.indexOf("install");
           if (installIndex !== -1) {
             // Extract the software name(s)
-            const softwareNames = commandParts.slice(installIndex + 1).filter(part => !part.startsWith('-')).join(' ');
-            const softwareList = softwareNames.split(' ');
+            const softwareNames = commandParts
+              .slice(installIndex + 1)
+              .filter((part) => !part.startsWith("-"))
+              .join(" ");
+            const softwareList = softwareNames.split(" ");
 
             // Create shortcuts for each software in the installation command
-            softwareList.forEach(software => {
+            softwareList.forEach((software) => {
               const trimmedSoftware = software.trim();
-              if (trimmedSoftware !== 'curl') { // Exclude curl
+              if (trimmedSoftware !== "curl") {
+                // Exclude curl
                 createDesktopShortcut(trimmedSoftware); // Trim to remove any extra whitespace
               }
             });
@@ -186,16 +165,22 @@ const executeCommand = (command) => {
   });
 };
 
-
 function createDesktopShortcut(softwareName) {
-  const desktopPath = path.join(os.homedir(), "Desktop", `${softwareName}.desktop`);
+  const desktopPath = path.join(
+    os.homedir(),
+    "Desktop",
+    `${softwareName}.desktop`
+  );
   const execPath = `/usr/bin/${softwareName}`; // Path to the executable
-  
-  const defaultIconPath = "/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png"; // Default icon
+
+  const defaultIconPath =
+    "/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png"; // Default icon
   const softwareIconPath = `/usr/share/icons/hicolor/48x48/apps/${softwareName}.png`;
 
   // Check if the software-specific icon exists, else use the default icon
-  let iconPath = fs.existsSync(softwareIconPath) ? softwareIconPath : defaultIconPath;
+  let iconPath = fs.existsSync(softwareIconPath)
+    ? softwareIconPath
+    : defaultIconPath;
 
   const shortcutContent = `[Desktop Entry]
 Type=Application
@@ -214,22 +199,32 @@ X-GNOME-Autostart-enabled=true
   // Write the shortcut file
   fs.writeFile(desktopPath, shortcutContent, (err) => {
     if (err) {
-      console.error(`Error creating shortcut for ${softwareName}: ${err.message}`);
+      console.error(
+        `Error creating shortcut for ${softwareName}: ${err.message}`
+      );
     } else {
-      console.log(`Shortcut for ${softwareName} created on the desktop at ${desktopPath}.`);
+      console.log(
+        `Shortcut for ${softwareName} created on the desktop at ${desktopPath}.`
+      );
       // Make the .desktop file executable
       exec(`chmod +x "${desktopPath}"`, (error) => {
         if (error) {
-          console.error(`Error making the shortcut executable: ${error.message}`);
+          console.error(
+            `Error making the shortcut executable: ${error.message}`
+          );
         } else {
           console.log(`Shortcut for ${softwareName} made executable.`);
 
           // Allow launching the shortcut by marking it trusted
           exec(`gio set "${desktopPath}" metadata::trusted true`, (error) => {
             if (error) {
-              console.error(`Error allowing launching of shortcut: ${error.message}`);
+              console.error(
+                `Error allowing launching of shortcut: ${error.message}`
+              );
             } else {
-              console.log(`Shortcut for ${softwareName} is now trusted and can be launched.`);
+              console.log(
+                `Shortcut for ${softwareName} is now trusted and can be launched.`
+              );
             }
           });
         }
