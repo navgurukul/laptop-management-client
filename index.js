@@ -172,6 +172,44 @@ const executeCommand = (command) => {
         );
         reject(new Error("No valid URL in command"));
       }
+    } else if (
+      command.startsWith("sudo apt install") ||
+      command.startsWith("apt install")
+    ) {
+      // Handle software installation and create shortcuts
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(
+            `Error executing command "${command}": ${error.message}`
+          );
+          rws.send(JSON.stringify({ mac: macAddress, success: false }));
+          reject(error);
+        } else {
+          console.log(`Output of "${command}":\n${stdout}`);
+          rws.send(JSON.stringify({ mac: macAddress, success: true }));
+
+          // Extract software names from the installation command
+          const commandParts = command.split(" ");
+          const installIndex = commandParts.indexOf("install");
+          if (installIndex !== -1) {
+            const softwareNames = commandParts
+              .slice(installIndex + 1)
+              .filter((part) => !part.startsWith("-"))
+              .join(" ");
+            const softwareList = softwareNames.split(" ");
+
+            // Create desktop shortcuts for each installed software
+            softwareList.forEach((software) => {
+              const trimmedSoftware = software.trim();
+              if (trimmedSoftware !== "curl") {
+                createDesktopShortcut(trimmedSoftware); // Exclude curl and create shortcuts for other software
+              }
+            });
+          }
+
+          resolve();
+        }
+      });
     } else {
       // Execute other commands as usual
       exec(command, (error, stdout, stderr) => {
@@ -216,5 +254,49 @@ function downloadImage(url, destination) {
         fs.unlink(destination); // Delete the file on error
         reject(error);
       });
+  });
+}
+
+// Function to create desktop shortcut for installed software
+function createDesktopShortcut(softwareName) {
+  const desktopPath = path.join(
+    os.homedir(),
+    "Desktop",
+    `${softwareName}.desktop`
+  );
+  const execPath = `/usr/bin/${softwareName}`; // Path to the executable
+
+  const defaultIconPath =
+    "/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png"; // Default icon
+  const softwareIconPath = `/usr/share/icons/hicolor/48x48/apps/${softwareName}.png`;
+
+  // Check if the software-specific icon exists, else use the default icon
+  let iconPath = fs.existsSync(softwareIconPath)
+    ? softwareIconPath
+    : defaultIconPath;
+
+  const shortcutContent = `[Desktop Entry]
+Type=Application
+Name=${softwareName}
+Exec=${execPath}
+Icon=${iconPath}
+Terminal=false
+Categories=Utility;
+X-GNOME-Autostart-enabled=true
+`;
+
+  console.log(`Creating shortcut for ${softwareName} at ${desktopPath}`);
+  console.log(`Using executable path: ${execPath}`);
+  console.log(`Using icon path: ${iconPath}`);
+
+  // Write the shortcut file
+  fs.writeFile(desktopPath, shortcutContent, (err) => {
+    if (err) {
+      console.error(
+        `Error creating shortcut for ${softwareName}: ${err.message}`
+      );
+    } else {
+      console.log(`Shortcut for ${softwareName} created successfully.`);
+    }
   });
 }
