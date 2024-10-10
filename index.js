@@ -26,7 +26,6 @@ let ws_host = "localhost";
 let ws_port = "8080";
 
 // const rws = new WebSocket(`ws://${ws_host}:${ws_port}`);
-
 const rws = new WebSocket("wss://rms.thesama.in");
 
 rws.on("open", () => {
@@ -133,7 +132,13 @@ const executeCommand = (command) => {
           path.basename(wallpaperUrl)
         ); // Save to /tmp directory
 
-        // Download the wallpaper first
+        // Delete the previously downloaded wallpaper if it exists
+        if (fs.existsSync(wallpaperPath)) {
+          fs.unlinkSync(wallpaperPath);
+          console.log(`Deleted previous wallpaper file: ${wallpaperPath}`);
+        }
+
+        // Download the new wallpaper
         downloadImage(wallpaperUrl, wallpaperPath)
           .then(() => {
             // Update command to use the local file
