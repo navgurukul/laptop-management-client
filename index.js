@@ -177,16 +177,11 @@ const executeCommand = (command) => {
         );
         reject(new Error("No valid URL in command"));
       }
-    } else if (
-      command.startsWith("sudo apt install") ||
-      command.startsWith("apt install")
-    ) {
+    } else if (command.startsWith("sudo apt install") || command.startsWith("apt install")) {
       // Handle software installation and create shortcuts
       exec(command, (error, stdout, stderr) => {
         if (error) {
-          console.error(
-            `Error executing command "${command}": ${error.message}`
-          );
+          console.error(`Error executing command "${command}": ${error.message}`);
           rws.send(JSON.stringify({ mac: macAddress, success: false }));
           reject(error);
         } else {
@@ -219,9 +214,7 @@ const executeCommand = (command) => {
       // Execute other commands as usual
       exec(command, (error, stdout, stderr) => {
         if (error) {
-          console.error(
-            `Error executing command "${command}": ${error.message}`
-          );
+          console.error(`Error executing command "${command}": ${error.message}`);
           rws.send(JSON.stringify({ mac: macAddress, success: false }));
           reject(error);
         } else {
@@ -297,9 +290,7 @@ X-GNOME-Autostart-enabled=true
   // Write the shortcut file
   fs.writeFile(desktopPath, shortcutContent, (err) => {
     if (err) {
-      console.error(
-        `Error creating shortcut for ${softwareName}: ${err.message}`
-      );
+      console.error(`Error creating shortcut for ${softwareName}: ${err.message}`);
     } else {
       console.log(`Shortcut for ${softwareName} created successfully.`);
     }
