@@ -3,6 +3,9 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 
+// Set the DISPLAY environment variable for GUI applications
+process.env.DISPLAY = ":0"; // Adjust this if necessary; use 'echo $DISPLAY' in terminal to find the correct value
+
 // Path to the JSON file
 const channelFilePath = path.join(__dirname, "channel.json");
 
