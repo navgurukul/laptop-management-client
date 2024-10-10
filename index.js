@@ -132,11 +132,6 @@ const executeCommand = (command) => {
           path.basename(wallpaperUrl)
         ); // Save to /tmp directory
 
-        // Delete the previously downloaded wallpaper if it exists
-        if (fs.existsSync(wallpaperPath)) {
-          fs.unlinkSync(wallpaperPath);
-          console.log(`Deleted previous wallpaper file: ${wallpaperPath}`);
-        }
 
         // Download the new wallpaper
         downloadImage(wallpaperUrl, wallpaperPath)
