@@ -3,6 +3,7 @@ const { exec } = require("child_process");
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
+const https = require("https");
 
 // Path to the JSON file
 const channelFilePath = path.join(__dirname, "channel.json");
@@ -116,119 +117,104 @@ const executeCommand = (command) => {
     const macAddress = getMacAddress(); // Get the MAC address
 
     console.log(`Executing command: ${command}`);
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Error executing command "${command}": ${error.message}`);
-        rws.send( JSON.stringify({ mac: macAddress, success: false}));
 
-        reject(error);
-      } else {
-        console.log(`Output of "${command}":\n${stdout}`);
-        
-           rws.send( JSON.stringify({ mac: macAddress, success: true }));
-      
+    // Check if the command is to set a wallpaper
+    if (
+      command.startsWith(
+        "gsettings set org.gnome.desktop.background picture-uri"
+      )
+    ) {
+      const urlMatch = command.match(/'(https?:\/\/[^']+)'/); // Extract URL from command
 
-        if (stderr) {
-          console.warn(`Stderr of "${command}": ${stderr}`);
-          // rws.send(`[MAC: ${macAddress}] Stderr of "${command}": ${stderr}\n`);
-        }
+      if (urlMatch) {
+        const wallpaperUrl = urlMatch[1];
+        const wallpaperPath = path.join(
+          os.tmpdir(),
+          path.basename(wallpaperUrl)
+        ); // Save to /tmp directory
 
-        // Check if the command is an installation command
-        if (
-          command.startsWith("sudo apt install") ||
-          command.startsWith("apt install")
-        ) {
-          const commandParts = command.split(" ");
-          const installIndex = commandParts.indexOf("install");
-          if (installIndex !== -1) {
-            // Extract the software name(s)
-            const softwareNames = commandParts
-              .slice(installIndex + 1)
-              .filter((part) => !part.startsWith("-"))
-              .join(" ");
-            const softwareList = softwareNames.split(" ");
+        // Download the wallpaper first
+        downloadImage(wallpaperUrl, wallpaperPath)
+          .then(() => {
+            // Update command to use the local file
+            const localCommand = `gsettings set org.gnome.desktop.background picture-uri "file://${wallpaperPath}"`;
 
-            // Create shortcuts for each software in the installation command
-            softwareList.forEach((software) => {
-              const trimmedSoftware = software.trim();
-              if (trimmedSoftware !== "curl") {
-                // Exclude curl
-                createDesktopShortcut(trimmedSoftware); // Trim to remove any extra whitespace
+            // Execute the command to set the wallpaper
+            exec(localCommand, (error, stdout, stderr) => {
+              if (error) {
+                console.error(
+                  `Error executing command "${localCommand}": ${error.message}`
+                );
+                rws.send(JSON.stringify({ mac: macAddress, success: false }));
+                reject(error);
+              } else {
+                console.log(
+                  `Wallpaper set successfully using: ${wallpaperPath}`
+                );
+                rws.send(JSON.stringify({ mac: macAddress, success: true }));
+                resolve();
               }
             });
-          }
-        }
-
-        resolve();
+          })
+          .catch((error) => {
+            console.error(`Error downloading wallpaper: ${error.message}`);
+            rws.send(JSON.stringify({ mac: macAddress, success: false }));
+            reject(error);
+          });
+      } else {
+        console.error("No valid URL found in wallpaper command.");
+        rws.send(
+          JSON.stringify({
+            mac: macAddress,
+            success: false,
+            error: "No valid URL in command",
+          })
+        );
+        reject(new Error("No valid URL in command"));
       }
-    });
-  });
-};
-
-function createDesktopShortcut(softwareName) {
-  const desktopPath = path.join(
-    os.homedir(),
-    "Desktop",
-    `${softwareName}.desktop`
-  );
-  const execPath = `/usr/bin/${softwareName}`; // Path to the executable
-
-  const defaultIconPath =
-    "/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png"; // Default icon
-  const softwareIconPath = `/usr/share/icons/hicolor/48x48/apps/${softwareName}.png`;
-
-  // Check if the software-specific icon exists, else use the default icon
-  let iconPath = fs.existsSync(softwareIconPath)
-    ? softwareIconPath
-    : defaultIconPath;
-
-  const shortcutContent = `[Desktop Entry]
-Type=Application
-Name=${softwareName}
-Exec=${execPath}
-Icon=${iconPath}
-Terminal=false
-Categories=Utility;
-X-GNOME-Autostart-enabled=true
-`;
-
-  console.log(`Creating shortcut for ${softwareName} at ${desktopPath}`);
-  console.log(`Using executable path: ${execPath}`);
-  console.log(`Using icon path: ${iconPath}`);
-
-  // Write the shortcut file
-  fs.writeFile(desktopPath, shortcutContent, (err) => {
-    if (err) {
-      console.error(
-        `Error creating shortcut for ${softwareName}: ${err.message}`
-      );
     } else {
-      console.log(
-        `Shortcut for ${softwareName} created on the desktop at ${desktopPath}.`
-      );
-      // Make the .desktop file executable
-      exec(`chmod +x "${desktopPath}"`, (error) => {
+      // Execute other commands as usual
+      exec(command, (error, stdout, stderr) => {
         if (error) {
           console.error(
-            `Error making the shortcut executable: ${error.message}`
+            `Error executing command "${command}": ${error.message}`
           );
+          rws.send(JSON.stringify({ mac: macAddress, success: false }));
+          reject(error);
         } else {
-          console.log(`Shortcut for ${softwareName} made executable.`);
-
-          // Allow launching the shortcut by marking it trusted
-          exec(`gio set "${desktopPath}" metadata::trusted true`, (error) => {
-            if (error) {
-              console.error(
-                `Error allowing launching of shortcut: ${error.message}`
-              );
-            } else {
-              console.log(
-                `Shortcut for ${softwareName} is now trusted and can be launched.`
-              );
-            }
-          });
+          console.log(`Output of "${command}":\n${stdout}`);
+          rws.send(JSON.stringify({ mac: macAddress, success: true }));
+          resolve();
         }
       });
     }
+  });
+};
+
+// Function to download the image
+function downloadImage(url, destination) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destination);
+
+    https
+      .get(url, (response) => {
+        if (response.statusCode === 200) {
+          response.pipe(file);
+
+          file.on("finish", () => {
+            file.close(() => resolve());
+          });
+        } else {
+          reject(
+            new Error(
+              `Failed to download image. Status code: ${response.statusCode}`
+            )
+          );
+        }
+      })
+      .on("error", (error) => {
+        fs.unlink(destination); // Delete the file on error
+        reject(error);
+      });
   });
 }
