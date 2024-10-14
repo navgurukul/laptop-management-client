@@ -123,30 +123,43 @@ const executeCommand = (command) => {
         "gsettings set org.gnome.desktop.background picture-uri"
       )
     ) {
-      const urlMatch = command.match(/'(https?:\/\/[^']+)'/); // Extract URL from command
+      // const urlMatch = command.match(/'(https?:\/\/[^']+)'/); 
+      // const permanentDirectory = path.join(process.env.HOME, 'laptop-management-client', 'wallpapers'); // Create a 'wallpapers' folder in laptop-management-client
+
+      // // Ensure the permanent directory exists
+      // if (!fs.existsSync(permanentDirectory)) {
+      //   fs.mkdirSync(permanentDirectory, { recursive: true });
+      // }
 
       // if (urlMatch) {
       //   const wallpaperUrl = urlMatch[1];
       //   const wallpaperPath = path.join(
-      //     os.tmpdir(),
+      //     permanentDirectory, // Save to the 'wallpapers' folder in your project
       //     path.basename(wallpaperUrl)
-      //   ); // Save to /tmp directory
-      const permanentDirectory = path.join(process.env.HOME, 'laptop-management-client', 'wallpapers'); // Create a 'wallpapers' folder in laptop-management-client
+      //   ); // Save to specified permanent directory
+      //   // Continue with downloading the wallpaper and executing the command...
 
+      const fs = require('fs');
+      const path = require('path');
+      
+      const urlMatch = command.match(/'(https?:\/\/[^']+)'/); 
+      const permanentDirectory = path.join(process.env.HOME, 'wallpapers'); // Create a 'wallpapers' folder outside of laptop-management-client
+      
       // Ensure the permanent directory exists
       if (!fs.existsSync(permanentDirectory)) {
         fs.mkdirSync(permanentDirectory, { recursive: true });
       }
-
+      
       if (urlMatch) {
         const wallpaperUrl = urlMatch[1];
         const wallpaperPath = path.join(
-          permanentDirectory, // Save to the 'wallpapers' folder in your project
+          permanentDirectory, // Save to the 'wallpapers' folder outside of your project
           path.basename(wallpaperUrl)
         ); // Save to specified permanent directory
-        // Continue with downloading the wallpaper and executing the command...
-
-
+      
+        // Continue with downloading the wallpaper and executing the command... 
+      
+      
         // Download the new wallpaper
         downloadImage(wallpaperUrl, wallpaperPath)
           .then(() => {
