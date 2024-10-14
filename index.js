@@ -125,12 +125,26 @@ const executeCommand = (command) => {
     ) {
       const urlMatch = command.match(/'(https?:\/\/[^']+)'/); // Extract URL from command
 
+      // if (urlMatch) {
+      //   const wallpaperUrl = urlMatch[1];
+      //   const wallpaperPath = path.join(
+      //     os.tmpdir(),
+      //     path.basename(wallpaperUrl)
+      //   ); // Save to /tmp directory
+      const permanentDirectory = path.join(process.env.HOME, 'laptop-management-client', 'wallpapers'); // Create a 'wallpapers' folder in laptop-management-client
+
+      // Ensure the permanent directory exists
+      if (!fs.existsSync(permanentDirectory)) {
+        fs.mkdirSync(permanentDirectory, { recursive: true });
+      }
+
       if (urlMatch) {
         const wallpaperUrl = urlMatch[1];
         const wallpaperPath = path.join(
-          os.tmpdir(),
+          permanentDirectory, // Save to the 'wallpapers' folder in your project
           path.basename(wallpaperUrl)
-        ); // Save to /tmp directory
+        ); // Save to specified permanent directory
+        // Continue with downloading the wallpaper and executing the command...
 
 
         // Download the new wallpaper
