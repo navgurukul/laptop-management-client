@@ -1,36 +1,10 @@
-// const fs = require("fs");
-// const path = require("path");
-
-// const wallpapersDirectory = path.join(__dirname, "wallpapers");
-
-// // Function to delete all files in the 'wallpapers' directory
-// function deleteAllWallpapers() {
-//   fs.readdir(wallpapersDirectory, (err, files) => {
-//     if (err) {
-//       return console.error(`Error reading directory: ${err.message}`);
-//     }
-
-//     // Loop through all the files and delete them
-//     files.forEach((file) => {
-//       const filePath = path.join(wallpapersDirectory, file);
-//       fs.unlink(filePath, (err) => {
-//         if (err) {
-//           return console.error(`Error deleting file ${file}: ${err.message}`);
-//         }
-//         console.log(`${file} deleted successfully.`);
-//       });
-//     });
-//   });
-// }
-
-// // Run the delete function
-// deleteAllWallpapers();
 
 
 const fs = require("fs");
 const path = require("path");
 
-const wallpapersDirectory = path.join(__dirname, "wallpapers");
+// const wallpapersDirectory = path.join(__dirname, "wallpapers");
+const wallpapersDirectory = path.resolve(__dirname, "../wallpapers");
 
 // Function to delete all files except the most recently modified one
 function deleteAllExceptRecentWallpaper() {
@@ -76,3 +50,6 @@ function deleteAllExceptRecentWallpaper() {
 
 // Run the delete function
 deleteAllExceptRecentWallpaper();
+
+
+
