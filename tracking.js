@@ -111,4 +111,5 @@ async function logStatus() {
 
 // Log the system status every 1 minute (60000 milliseconds)
 logStatus();
-setInterval(logStatus, 1000);
+// setInterval(logStatus, 1000);
+setInterval(logStatus, 60000); 
